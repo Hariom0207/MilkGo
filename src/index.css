@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --color-milk-50: #f8fafc;
+  --color-milk-100: #f1f5f9;
+  --color-milk-200: #e2e8f0;
+  --color-milk-400: #94a3b8;
+  --color-milk-500: #64748b;
+  --color-milk-700: #334155;
+  --color-milk-800: #1e293b;
+  --color-milk-900: #0f172a;
+  --color-stock-in: #155e75;
+  --color-stock-in-bg: #e0f2fe;
+  --color-stock-low: #92400e;
+  --color-stock-low-bg: #fef3c7;
+  --color-stock-out: #991b1b;
+  --color-stock-out-bg: #fee2e2;
+  --color-sell: #065f46;
+  --color-cyan-soft: #cffafe;
+  --color-cyan-deep: #164e63;
+  --color-cyan-mid: #0891b2;
+  --color-teal-panel: #0e7490;
+  --color-success: #059669;
+  --color-danger: #dc2626;
+  --color-warn: #d97706;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-milk-50);
+  color: var(--color-milk-900);
+  -webkit-font-smoothing: antialiased;
+}
