@@ -15,23 +15,28 @@ export function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!identifier.trim() || !password.trim()) {
-      setError('Please fill in both email/mobile number and password.')
-      return
-    }
-
     setError('')
     setIsLoading(true)
 
-    // Simulate login and navigate to dashboard
+    // Save session and navigate to Home screen
     setTimeout(() => {
       setIsLoading(false)
-      navigate('/')
-    }, 600)
+      const userToSave = identifier.trim() || 'Ramesh Kumar'
+      const displayName = userToSave.includes('@') ? userToSave.split('@')[0] : userToSave
+      localStorage.setItem(
+        'milkgo_user',
+        JSON.stringify({ fullName: displayName, identifier: userToSave, loggedIn: true })
+      )
+      navigate('/home')
+    }, 250)
   }
 
   const handleGoogleLogin = () => {
-    navigate('/')
+    localStorage.setItem(
+      'milkgo_user',
+      JSON.stringify({ fullName: 'Google User', loggedIn: true })
+    )
+    navigate('/home')
   }
 
   return (
@@ -69,7 +74,6 @@ export function LoginPage() {
                 placeholder="Enter your email or mobile number"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                required
               />
 
               <AuthInput
@@ -80,7 +84,6 @@ export function LoginPage() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
               />
 
               {/* Remember me & Forgot password */}
@@ -111,11 +114,21 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0e7490] py-3 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-[#155e75] active:scale-[0.99] disabled:opacity-70 cursor-pointer"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0e7490] py-3.5 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-[#155e75] active:scale-[0.99] disabled:opacity-70 cursor-pointer"
               >
-                <span>{isLoading ? 'Logging in...' : 'Login'}</span>
+                <span>{isLoading ? 'Entering...' : 'Login'}</span>
                 <ArrowRight className="size-4" />
               </button>
+
+              {/* Direct Skip Bypass */}
+              <div className="text-center pt-1">
+                <Link
+                  to="/home"
+                  className="text-xs font-medium text-slate-400 hover:text-[#0e7490] hover:underline transition"
+                >
+                  Skip without login & Enter Home →
+                </Link>
+              </div>
             </form>
 
             {/* Divider */}
