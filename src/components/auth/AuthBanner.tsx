@@ -1,5 +1,5 @@
 import logoHeader from '../../assets/logo-header.png'
-import { DairyIllustration } from './DairyIllustration'
+import authIllustration from '../../assets/auth-illustration.png'
 
 export function AuthBanner() {
   return (
@@ -28,7 +28,11 @@ export function AuthBanner() {
 
       {/* Center: Dairy Illustration */}
       <div className="relative z-10 my-auto py-6">
-        <DairyIllustration />
+        <img
+          src={authIllustration}
+          alt="Milk bottle, dairy cow, and business analytics illustration"
+          className="mx-auto block h-auto max-h-[42vh] w-full max-w-[360px] object-contain"
+        />
       </div>
 
       {/* Bottom: Feature Pillars & Mission statement */}
