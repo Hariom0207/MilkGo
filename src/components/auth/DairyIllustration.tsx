@@ -4,7 +4,7 @@ export function DairyIllustration() {
       <svg
         viewBox="0 0 520 400"
         fill="none"
-        xmlns="http://www.w3.org/2000/svg"
+        xmlns="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgI3fF6_ebdidZr1lnTEvKusZLVuw2ZKsrhm_Xtxn6ZdQlOo9PBRq1v2VW&s=10"
         className="h-auto w-full drop-shadow-sm"
       >
         <defs>

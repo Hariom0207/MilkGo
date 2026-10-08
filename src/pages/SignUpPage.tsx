@@ -28,17 +28,10 @@ export function SignUpPage() {
     e.preventDefault()
 
     if (
-      !formData.fullName.trim() ||
-      !formData.email.trim() ||
-      !formData.mobileNumber.trim() ||
-      !formData.password.trim() ||
-      !formData.confirmPassword.trim()
+      formData.password &&
+      formData.confirmPassword &&
+      formData.password !== formData.confirmPassword
     ) {
-      setError('Please fill in all fields.')
-      return
-    }
-
-    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match. Please re-check.')
       return
     }
@@ -46,15 +39,33 @@ export function SignUpPage() {
     setError('')
     setIsLoading(true)
 
-    // Simulate account creation and redirect to dashboard
+    // Save session and redirect to Home screen
     setTimeout(() => {
       setIsLoading(false)
-      navigate('/')
-    }, 600)
+      const displayName = formData.fullName.trim() || 'New User'
+      localStorage.setItem(
+        'milkgo_user',
+        JSON.stringify({
+          fullName: displayName,
+          email: formData.email.trim() || 'user@milkgo.com',
+          mobileNumber: formData.mobileNumber.trim(),
+          loggedIn: true,
+        })
+      )
+      navigate('/home')
+    }, 250)
   }
 
   const handleGoogleSignup = () => {
-    navigate('/')
+    localStorage.setItem(
+      'milkgo_user',
+      JSON.stringify({
+        fullName: 'Google User',
+        email: 'user@google.com',
+        loggedIn: true,
+      })
+    )
+    navigate('/home')
   }
 
   return (
@@ -92,7 +103,6 @@ export function SignUpPage() {
                 placeholder="Enter your full name"
                 value={formData.fullName}
                 onChange={handleChange}
-                required
               />
 
               <AuthInput
@@ -103,7 +113,6 @@ export function SignUpPage() {
                 placeholder="Enter your email address"
                 value={formData.email}
                 onChange={handleChange}
-                required
               />
 
               <AuthInput
@@ -114,7 +123,6 @@ export function SignUpPage() {
                 placeholder="Enter your mobile number"
                 value={formData.mobileNumber}
                 onChange={handleChange}
-                required
               />
 
               <AuthInput
@@ -125,7 +133,6 @@ export function SignUpPage() {
                 placeholder="Create a password"
                 value={formData.password}
                 onChange={handleChange}
-                required
               />
 
               <AuthInput
@@ -136,18 +143,27 @@ export function SignUpPage() {
                 placeholder="Re-enter your password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                required
               />
 
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0e7490] py-3 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-[#155e75] active:scale-[0.99] disabled:opacity-70 cursor-pointer"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0e7490] py-3.5 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-[#155e75] active:scale-[0.99] disabled:opacity-70 cursor-pointer"
               >
-                <span>{isLoading ? 'Creating account...' : 'Sign Up'}</span>
+                <span>{isLoading ? 'Entering...' : 'Sign Up'}</span>
                 <ArrowRight className="size-4" />
               </button>
+
+              {/* Direct Skip Bypass */}
+              <div className="text-center pt-1">
+                <Link
+                  to="/home"
+                  className="text-xs font-medium text-slate-400 hover:text-[#0e7490] hover:underline transition"
+                >
+                  Skip without sign up & Enter Home →
+                </Link>
+              </div>
             </form>
 
             {/* Divider */}
