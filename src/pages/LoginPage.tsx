@@ -1,42 +1,63 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import { AuthBanner } from '../components/auth/AuthBanner'
 import { AuthInput } from '../components/auth/AuthInput'
 import { GoogleButton } from '../components/auth/GoogleButton'
+import { useAuth } from '../context/AuthContext'
+import { authErrorMessage } from '../lib/authErrors'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const { user, login, loginWithGoogle, resetPassword } = useAuth()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  if (user) return <Navigate to="/home" replace />
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!identifier.trim() || !password) {
+      setError('Please enter your email and password.')
+      return
+    }
     setError('')
     setIsLoading(true)
-
-    // Save session and navigate to Home screen
-    setTimeout(() => {
-      setIsLoading(false)
-      const userToSave = identifier.trim() || 'Ramesh Kumar'
-      const displayName = userToSave.includes('@') ? userToSave.split('@')[0] : userToSave
-      localStorage.setItem(
-        'milkgo_user',
-        JSON.stringify({ fullName: displayName, identifier: userToSave, loggedIn: true })
-      )
+    try {
+      await login(identifier.trim(), password, rememberMe)
       navigate('/home')
-    }, 250)
+    } catch (err) {
+      setError(authErrorMessage(err) ?? '')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleGoogleLogin = () => {
-    localStorage.setItem(
-      'milkgo_user',
-      JSON.stringify({ fullName: 'Google User', loggedIn: true })
-    )
-    navigate('/home')
+  const handleGoogleLogin = async () => {
+    setError('')
+    try {
+      await loginWithGoogle()
+      navigate('/home')
+    } catch (err) {
+      setError(authErrorMessage(err) ?? '')
+    }
+  }
+
+  const handleForgotPassword = async () => {
+    if (!identifier.trim()) {
+      setError('Enter your email above, then click "Forgot password?".')
+      return
+    }
+    try {
+      await resetPassword(identifier.trim())
+      setError('')
+      alert('If an account exists for this email, a reset link has been sent.')
+    } catch (err) {
+      setError(authErrorMessage(err) ?? '')
+    }
   }
 
   return (
@@ -67,11 +88,11 @@ export function LoginPage() {
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <AuthInput
-                label="Email or Mobile Number"
+                label="Email Address"
                 name="identifier"
-                type="text"
+                type="email"
                 icon={Mail}
-                placeholder="Enter your email or mobile number"
+                placeholder="Enter your email address"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
               />
@@ -98,16 +119,13 @@ export function LoginPage() {
                   <span>Remember me</span>
                 </label>
 
-                <a
-                  href="#forgot"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    alert('Password reset link has been sent to your registered contact.')
-                  }}
-                  className="text-xs sm:text-sm font-medium text-[#0e7490] hover:text-[#155e75] hover:underline"
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs sm:text-sm font-medium text-[#0e7490] hover:text-[#155e75] hover:underline cursor-pointer"
                 >
                   Forgot password?
-                </a>
+                </button>
               </div>
 
               {/* Submit Button */}
@@ -119,16 +137,6 @@ export function LoginPage() {
                 <span>{isLoading ? 'Entering...' : 'Login'}</span>
                 <ArrowRight className="size-4" />
               </button>
-
-              {/* Direct Skip Bypass */}
-              <div className="text-center pt-1">
-                <Link
-                  to="/home"
-                  className="text-xs font-medium text-slate-400 hover:text-[#0e7490] hover:underline transition"
-                >
-                  Skip without login & Enter Home →
-                </Link>
-              </div>
             </form>
 
             {/* Divider */}

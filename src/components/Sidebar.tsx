@@ -12,6 +12,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import avatar from '../assets/avatar.png'
+import { useAuth } from '../context/AuthContext'
 import logoHeader from '../assets/logo-header.png'
 
 const navItems = [
@@ -28,12 +29,11 @@ const navItems = [
 
 export function Sidebar() {
   const navigate = useNavigate()
-  const userStr = typeof window !== 'undefined' ? localStorage.getItem('milkgo_user') : null
-  const user = userStr ? JSON.parse(userStr) : null
-  const displayName = user?.fullName || user?.identifier || 'Ramesh Kumar'
+  const { user, logout } = useAuth()
+  const displayName = user?.displayName || user?.email || 'MilkGo User'
 
-  const handleLogout = () => {
-    localStorage.removeItem('milkgo_user')
+  const handleLogout = async () => {
+    await logout()
     navigate('/login')
   }
 
