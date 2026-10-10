@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { User, Mail, Phone, Lock, ArrowRight } from 'lucide-react'
 import { AuthBanner } from '../components/auth/AuthBanner'
 import { AuthInput } from '../components/auth/AuthInput'
 import { GoogleButton } from '../components/auth/GoogleButton'
+import { useAuth } from '../context/AuthContext'
+import { authErrorMessage } from '../lib/authErrors'
 
 export function SignUpPage() {
   const navigate = useNavigate()
+  const { user, signup, loginWithGoogle } = useAuth()
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -24,48 +27,38 @@ export function SignUpPage() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  if (user) return <Navigate to="/home" replace />
 
-    if (
-      formData.password &&
-      formData.confirmPassword &&
-      formData.password !== formData.confirmPassword
-    ) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.fullName.trim() || !formData.email.trim() || !formData.password) {
+      setError('Please fill in your name, email and password.')
+      return
+    }
+    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match. Please re-check.')
       return
     }
-
     setError('')
     setIsLoading(true)
-
-    // Save session and redirect to Home screen
-    setTimeout(() => {
-      setIsLoading(false)
-      const displayName = formData.fullName.trim() || 'New User'
-      localStorage.setItem(
-        'milkgo_user',
-        JSON.stringify({
-          fullName: displayName,
-          email: formData.email.trim() || 'user@milkgo.com',
-          mobileNumber: formData.mobileNumber.trim(),
-          loggedIn: true,
-        })
-      )
+    try {
+      await signup(formData.fullName.trim(), formData.email.trim(), formData.password)
       navigate('/home')
-    }, 250)
+    } catch (err) {
+      setError(authErrorMessage(err) ?? '')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleGoogleSignup = () => {
-    localStorage.setItem(
-      'milkgo_user',
-      JSON.stringify({
-        fullName: 'Google User',
-        email: 'user@google.com',
-        loggedIn: true,
-      })
-    )
-    navigate('/home')
+  const handleGoogleSignup = async () => {
+    setError('')
+    try {
+      await loginWithGoogle()
+      navigate('/home')
+    } catch (err) {
+      setError(authErrorMessage(err) ?? '')
+    }
   }
 
   return (
@@ -154,16 +147,6 @@ export function SignUpPage() {
                 <span>{isLoading ? 'Entering...' : 'Sign Up'}</span>
                 <ArrowRight className="size-4" />
               </button>
-
-              {/* Direct Skip Bypass */}
-              <div className="text-center pt-1">
-                <Link
-                  to="/home"
-                  className="text-xs font-medium text-slate-400 hover:text-[#0e7490] hover:underline transition"
-                >
-                  Skip without sign up & Enter Home →
-                </Link>
-              </div>
             </form>
 
             {/* Divider */}
