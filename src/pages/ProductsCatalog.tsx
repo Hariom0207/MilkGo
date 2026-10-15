@@ -1,4 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ProductImage } from '../components/ProductImage'
+import { api } from '../lib/api'
+import type { ApiProduct } from '../data/products'
 import { LayoutGrid, List, Plus, Search } from 'lucide-react'
 import tonedMilk from '../assets/products/toned-milk.png'
 import fullCreamMilk from '../assets/products/full-cream-milk.png'
@@ -34,7 +38,7 @@ type Product = {
   margin: string
 }
 
-const products: Product[] = [
+const builtIn: Product[] = [
   {
     id: 'MILK-TON-500',
     category: 'Milk',
@@ -115,6 +119,25 @@ const products: Product[] = [
   },
 ]
 
+const inr = (paise: number) => `₹${(paise / 100).toFixed(2)}`
+
+function fromApi(r: ApiProduct): Product {
+  const sell = r.sellRate ?? 0
+  return {
+    id: r.id,
+    category: r.category ?? 'Other',
+    name: r.name,
+    pack: r.pack || r.unit,
+    sku: r.id.slice(0, 8).toUpperCase(),
+    image: r.image ?? '',
+    stockLabel: 'New Product',
+    stockTone: 'in',
+    buy: inr(r.defaultRate),
+    sell: sell ? inr(sell) : '-',
+    margin: sell ? `${(((sell - r.defaultRate) / sell) * 100).toFixed(1)}%` : '-',
+  }
+}
+
 function stockClass(tone: StockTone) {
   if (tone === 'low') return 'bg-stock-low-bg text-stock-low'
   if (tone === 'out') return 'bg-stock-out-bg text-stock-out'
@@ -132,6 +155,17 @@ function StockBadge({ product }: { product: Product }) {
 }
 
 export function ProductsCatalog() {
+  const [added, setAdded] = useState<Product[]>([])
+  useEffect(() => {
+    api
+      .get<ApiProduct[]>('/products')
+      .then((rows) => setAdded(rows.map(fromApi)))
+      .catch(() => {})
+  }, [])
+  const products = useMemo(
+    () => [...builtIn, ...added.filter((a) => !builtIn.some((b) => b.name === a.name))],
+    [added],
+  )
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<(typeof categories)[number]>('All Products')
   const [view, setView] = useState<'grid' | 'list'>('grid')
@@ -147,7 +181,7 @@ export function ProductsCatalog() {
         product.pack.toLowerCase().includes(q)
       return matchesCategory && matchesQuery
     })
-  }, [category, query])
+  }, [category, query, products])
 
   return (
     <div className="flex min-h-full flex-col">
@@ -164,13 +198,13 @@ export function ProductsCatalog() {
               className="w-full bg-transparent text-[13px] text-milk-900 outline-none placeholder:text-milk-400"
             />
           </label>
-          <button
-            type="button"
+          <Link
+            to="/products/new"
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-cyan-mid px-4 text-[13px] font-semibold text-white shadow-sm"
           >
             <Plus className="size-3.5" strokeWidth={2.5} />
             Add Product
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -232,11 +266,7 @@ export function ProductsCatalog() {
                 className="overflow-hidden rounded-2xl border border-milk-200 bg-white shadow-sm"
               >
                 <div className="h-[150px] overflow-clip">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="size-full object-cover"
-                  />
+                  <ProductImage src={product.image} alt={product.name} className="size-full" />
                 </div>
                 <div className="flex flex-col gap-3 p-4">
                   <div className="flex flex-col gap-1">
@@ -288,11 +318,7 @@ export function ProductsCatalog() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="size-12 shrink-0 overflow-clip rounded-lg">
-                          <img
-                            src={product.image}
-                            alt=""
-                            className="size-full object-cover"
-                          />
+                          <ProductImage src={product.image} alt="" className="size-full" />
                         </div>
                         <div>
                           <p className="font-semibold text-milk-800">{product.name}</p>
