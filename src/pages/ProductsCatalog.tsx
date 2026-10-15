@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ProductImage } from '../components/ProductImage'
+import { Modal } from '../components/Modal'
+import { ProductForm } from '../components/ProductForm'
 import { api } from '../lib/api'
 import type { ApiProduct } from '../data/products'
 import { LayoutGrid, List, Plus, Search } from 'lucide-react'
@@ -31,6 +33,7 @@ type Product = {
   pack: string
   sku: string
   image: string
+  raw?: ApiProduct
   stockLabel: string
   stockTone: StockTone
   buy: string
@@ -125,6 +128,7 @@ function fromApi(r: ApiProduct): Product {
   const sell = r.sellRate ?? 0
   return {
     id: r.id,
+    raw: r,
     category: r.category ?? 'Other',
     name: r.name,
     pack: r.pack || r.unit,
@@ -166,6 +170,8 @@ export function ProductsCatalog() {
     () => [...builtIn, ...added.filter((a) => !builtIn.some((b) => b.name === a.name))],
     [added],
   )
+  const [selected, setSelected] = useState<Product | null>(null)
+  const [editing, setEditing] = useState(false)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<(typeof categories)[number]>('All Products')
   const [view, setView] = useState<'grid' | 'list'>('grid')
@@ -263,7 +269,8 @@ export function ProductsCatalog() {
             {visible.map((product) => (
               <article
                 key={product.id}
-                className="overflow-hidden rounded-2xl border border-milk-200 bg-white shadow-sm"
+                onClick={() => setSelected(product)}
+                className="cursor-pointer overflow-hidden rounded-2xl border border-milk-200 bg-white shadow-sm"
               >
                 <div className="h-[150px] overflow-clip">
                   <ProductImage src={product.image} alt={product.name} className="size-full" />
@@ -314,7 +321,7 @@ export function ProductsCatalog() {
               </thead>
               <tbody>
                 {visible.map((product) => (
-                  <tr key={product.id} className="border-b border-milk-100 last:border-0">
+                  <tr key={product.id} onClick={() => setSelected(product)} className="cursor-pointer hover:bg-milk-50 border-b border-milk-100 last:border-0">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="size-12 shrink-0 overflow-clip rounded-lg">
@@ -341,6 +348,70 @@ export function ProductsCatalog() {
           </div>
         )}
       </div>
+      {selected && (
+        <Modal
+          title={editing ? 'Edit Product' : 'Product Details'}
+          onClose={() => {
+            setSelected(null)
+            setEditing(false)
+          }}
+        >
+          {editing && selected.raw ? (
+            <ProductForm
+              initial={selected.raw}
+              submitLabel="Save Changes"
+              onSave={async (payload) => {
+                const id = selected.id
+                await api.patch(`/products/${id}`, { ...payload, pack: payload.pack || undefined })
+                setAdded((cur) => cur.map((a) => (a.id === id ? fromApi({ ...payload, id }) : a)))
+                setSelected(null)
+                setEditing(false)
+              }}
+            />
+          ) : (
+            <>
+              <div className="h-[220px] overflow-clip rounded-xl">
+                <ProductImage src={selected.image} alt={selected.name} className="size-full" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <p className="text-[11px] font-semibold uppercase text-milk-400">{selected.category}</p>
+                <h2 className="text-lg font-bold text-milk-800">{selected.name}</h2>
+                <p className="text-xs text-milk-500">
+                  {selected.pack} • SKU: {selected.sku}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-[13px]">
+                <div>
+                  <p className="text-[11px] text-milk-500">Buy</p>
+                  <p className="font-semibold text-milk-800">{selected.buy}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-milk-500">Sell</p>
+                  <p className="font-bold text-sell">{selected.sell}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-milk-500">Margin</p>
+                  <p className="font-bold text-stock-in">{selected.margin}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <StockBadge product={selected} />
+                {selected.raw ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="rounded-lg bg-cyan-mid px-4 py-2 text-[13px] font-semibold text-white"
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <span className="text-xs text-milk-400">Built-in product (read-only)</span>
+                )}
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }

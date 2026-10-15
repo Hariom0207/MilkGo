@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -10,6 +11,8 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import avatar from '../assets/avatar.png'
 import { useAuth } from '../context/AuthContext'
@@ -29,6 +32,22 @@ const navItems = [
 
 export function Sidebar() {
   const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebar-collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggle = () =>
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem('sidebar-collapsed', c ? '0' : '1')
+      } catch {
+        /* ignore */
+      }
+      return !c
+    })
   const { user, logout } = useAuth()
   const displayName = user?.displayName || user?.email || 'MilkGo User'
 
@@ -38,13 +57,21 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-[260px] shrink-0 flex-col gap-8 border-r border-milk-200 bg-white px-4 py-6">
-      <div className="w-full">
-        <img
-          src={logoHeader}
-          alt="MilkGo"
-          className="h-14 w-full max-w-none object-contain object-left"
-        />
+    <aside
+      className={`relative z-20 flex h-full shrink-0 flex-col gap-8 border-r border-milk-200 bg-white px-3 py-6 transition-[width] duration-300 ease-in-out ${
+        collapsed ? 'w-[76px]' : 'w-[260px]'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className="absolute -right-3.5 top-7 flex size-7 items-center justify-center rounded-full border border-milk-200 bg-white text-cyan-deep shadow-sm"
+      >
+        {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+      </button>
+      <div className="w-full overflow-hidden">
+        <img src={logoHeader} alt="MilkGo" className="h-14 w-[236px] max-w-none object-contain object-left" />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1.5">
@@ -54,7 +81,8 @@ export function Sidebar() {
             to={to}
             className={({ isActive }) =>
               [
-                'flex items-center gap-3 rounded-lg px-4 py-3 text-[15px] transition-colors',
+                'group relative flex items-center gap-3 rounded-lg py-3 text-[15px] transition-colors',
+                'px-4',
                 isActive
                   ? 'bg-cyan-soft font-semibold text-cyan-deep'
                   : 'font-medium text-milk-500 hover:bg-milk-50 hover:text-milk-700',
@@ -62,13 +90,24 @@ export function Sidebar() {
             }
           >
             <Icon className="size-5 shrink-0" strokeWidth={2} />
-            <span>{label}</span>
+            <span
+              className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}
+            >
+              {label}
+            </span>
+            <span
+              className={`pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md bg-cyan-deep px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-md transition-opacity ${
+                collapsed ? 'group-hover:opacity-100' : 'hidden'
+              }`}
+            >
+              {label}
+            </span>
           </NavLink>
         ))}
       </nav>
 
       {/* User profile & Navigating to Login / Sign Up */}
-      <div className="flex items-center justify-between gap-2 rounded-lg bg-milk-50 p-2.5">
+      <div className="flex items-center justify-between gap-2 overflow-hidden whitespace-nowrap rounded-lg bg-milk-50 p-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <img
             src={avatar}
