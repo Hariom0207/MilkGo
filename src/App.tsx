@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './layouts/AppLayout'
+import { AddProduct } from './pages/AddProduct'
 import { AddPurchaseOrder } from './pages/AddPurchaseOrder'
 import { AddSalesOrder } from './pages/AddSalesOrder'
 import { CustomerDetails } from './pages/CustomerDetails'
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="customers" element={<CustomerOrders />} />
           <Route path="customers/:customerId" element={<CustomerDetails />} />
           <Route path="products" element={<ProductsCatalog />} />
+          <Route path="products/new" element={<AddProduct />} />
           <Route path="reports" element={<PlaceholderPage title="Reports" />} />
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
