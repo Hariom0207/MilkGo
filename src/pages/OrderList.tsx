@@ -7,6 +7,7 @@ import { api } from '../lib/api'
 import { useCatalog } from '../data/products'
 import { ProductImage } from '../components/ProductImage'
 import { Modal } from '../components/Modal'
+import { TableSkeleton } from '../components/Skeleton'
 
 type Order = {
   id: string
@@ -36,8 +37,10 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
   const [rows, setRows] = useState<Order[]>([])
   const { products: catalog } = useCatalog()
   const [selected, setSelected] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
   useEffect(() => {
-    api.get<Order[]>(endpoint).then(setRows).catch(() => setRows([]))
+    setLoading(true)
+    api.get<Order[]>(endpoint).then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
   }, [endpoint])
 
   return (
@@ -67,6 +70,7 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
               Export Excel
             </button>
           </div>
+          {loading ? <TableSkeleton rows={6} /> : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1500px] text-left">
               <thead>
@@ -117,6 +121,7 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
               </tbody>
             </table>
           </div>
+          )}
         </article>
       </div>
       {selected && (

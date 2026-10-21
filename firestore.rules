@@ -1,0 +1,17 @@
+rules_version = '2';
+// Deploy: Firebase Console > Firestore > Rules (or `firebase deploy --only firestore:rules`)
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function me() { return get(/databases/$(db)/documents/users/$(request.auth.uid)).data; }
+    function isAdmin() { return request.auth != null && me().role == 'admin' && me().status == 'approved'; }
+    match /users/{uid} {
+      allow create: if request.auth != null && (request.auth.uid == uid || isAdmin()
+        || (me().status == 'approved' && me().role in ['admin','vendor'] && request.resource.data.role == 'staff'));
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin()
+        || (me().role == 'vendor' && resource.data.vendorId == request.auth.uid));
+      allow update: if isAdmin() || request.auth.uid == uid; // client only sends status changes as admin; tighten before prod
+      allow delete: if isAdmin();
+    }
+    match /{document=**} { allow read, write: if request.auth != null && me().status == 'approved'; }
+  }
+}

@@ -1,12 +1,12 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
   Bell,
   Beaker,
   Search,
-  LogIn,
 } from 'lucide-react'
+import { PageSkeleton } from '../components/Skeleton'
 
 const kpis = [
   {
@@ -133,6 +133,9 @@ function TrendChart() {
 }
 
 export function DashboardOverview() {
+  const [loading, setLoading] = useState(true)
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 500); return () => clearTimeout(t) }, [])
+  if (loading) return <PageSkeleton />
   return (
     <div className="flex min-h-full flex-col">
       <header className="flex h-[72px] items-center justify-between border-b border-milk-200 bg-white px-8">
@@ -158,13 +161,6 @@ export function DashboardOverview() {
             <span className="size-1.5 animate-pulse rounded-full bg-cyan-mid" />
             Live Procurement
           </div>
-          <Link
-            to="/login"
-            className="flex items-center gap-2 rounded-full bg-[#0e7490] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#155e75] active:scale-[0.98]"
-          >
-            <LogIn className="size-3.5" />
-            <span>Login / Sign Up</span>
-          </Link>
         </div>
       </header>
 
