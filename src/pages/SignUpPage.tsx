@@ -42,7 +42,7 @@ export function SignUpPage() {
     setError('')
     setIsLoading(true)
     try {
-      await signup(formData.fullName.trim(), formData.email.trim(), formData.password)
+      await signup(formData.fullName.trim(), formData.email.trim(), formData.password, formData.mobileNumber.trim())
       navigate('/home')
     } catch (err) {
       setError(authErrorMessage(err) ?? '')

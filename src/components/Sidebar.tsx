@@ -1,25 +1,19 @@
-import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard,
-  ShoppingCart,
-  ShoppingBag,
-  Archive,
-  Truck,
-  Users,
-  Box,
-  BarChart3,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
+  LayoutDashboard, ShoppingCart, ShoppingBag, Archive, Truck, Users, Box,
+  BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
 import avatar from '../assets/avatar.png'
 import { useAuth } from '../context/AuthContext'
 import logoHeader from '../assets/logo-header.png'
+import { canAccess } from '../lib/roles'
+import { Modal } from './Modal'
+import { useState } from 'react'
 
 const navItems = [
   { to: '/home', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/team', label: 'My Staff', icon: Users },
   { to: '/purchase', label: 'Purchase', icon: ShoppingCart },
   { to: '/sales', label: 'Sales', icon: ShoppingBag },
   { to: '/inventory', label: 'Inventory', icon: Archive },
@@ -30,105 +24,79 @@ const navItems = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
-export function Sidebar() {
-  const navigate = useNavigate()
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('sidebar-collapsed') === '1'
-    } catch {
-      return false
-    }
-  })
-  const toggle = () =>
-    setCollapsed((c) => {
-      try {
-        localStorage.setItem('sidebar-collapsed', c ? '0' : '1')
-      } catch {
-        /* ignore */
-      }
-      return !c
-    })
-  const { user, logout } = useAuth()
-  const displayName = user?.displayName || user?.email || 'MilkGo User'
+type Props = { collapsed: boolean; onToggle: () => void; mobileOpen: boolean; onCloseMobile: () => void }
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
-  }
+export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: Props) {
+  const navigate = useNavigate()
+  const { user, profile, logout } = useAuth()
+  const [confirmOut, setConfirmOut] = useState(false)
+  const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null)
+  const displayName = profile?.name || user?.displayName || user?.email || 'MilkGo User'
+  const items = navItems.filter((i) =>
+    i.to === '/admin/users' ? profile?.role === 'admin'
+    : i.to === '/team' ? profile?.role === 'vendor' || profile?.role === 'admin'
+    : profile ? canAccess(profile.role, i.to) : false)
+
+  const handleLogout = async () => { setConfirmOut(false); await logout(); navigate('/login') }
+  const hideOnDesktop = collapsed ? 'lg:hidden' : '' // labels/logo only collapse on desktop, never on mobile drawer
 
   return (
-    <aside
-      className={`relative z-20 flex h-full shrink-0 flex-col gap-8 border-r border-milk-200 bg-white px-3 py-6 transition-[width] duration-300 ease-in-out ${
-        collapsed ? 'w-[76px]' : 'w-[260px]'
-      }`}
-    >
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="absolute -right-3.5 top-7 flex size-7 items-center justify-center rounded-full border border-milk-200 bg-white text-cyan-deep shadow-sm"
-      >
-        {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-      </button>
-      <div className="w-full overflow-hidden">
-        <img src={logoHeader} alt="MilkGo" className="h-14 w-[236px] max-w-none object-contain object-left" />
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-1.5">
-        {navItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              [
-                'group relative flex items-center gap-3 rounded-lg py-3 text-[15px] transition-colors',
-                'px-4',
-                isActive
-                  ? 'bg-cyan-soft font-semibold text-cyan-deep'
-                  : 'font-medium text-milk-500 hover:bg-milk-50 hover:text-milk-700',
-              ].join(' ')
-            }
-          >
-            <Icon className="size-5 shrink-0" strokeWidth={2} />
-            <span
-              className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}
-            >
-              {label}
-            </span>
-            <span
-              className={`pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md bg-cyan-deep px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-md transition-opacity ${
-                collapsed ? 'group-hover:opacity-100' : 'hidden'
-              }`}
-            >
-              {label}
-            </span>
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* User profile & Navigating to Login / Sign Up */}
-      <div className="flex items-center justify-between gap-2 overflow-hidden whitespace-nowrap rounded-lg bg-milk-50 p-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <img
-            src={avatar}
-            alt={displayName}
-            className="size-9 rounded-full object-cover shrink-0"
-          />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-milk-900">{displayName}</p>
-            <p className="truncate text-xs text-milk-500">Plant Manager</p>
-          </div>
+    <>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[260px] shrink-0 flex-col gap-6 border-r border-milk-200 bg-white px-4 py-5 transition-all duration-300 lg:sticky lg:top-0 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[76px] lg:px-2' : 'lg:w-[260px]'}`}>
+        {/* Logo + toggles */}
+        <div className={`flex shrink-0 items-center gap-2 ${collapsed ? 'lg:flex-col lg:justify-center' : ''}`}>
+          <img src={logoHeader} alt="MilkGo" className={`h-11 min-w-0 flex-1 object-contain object-left ${hideOnDesktop}`} />
+          <span className={`size-11 shrink-0 items-center justify-center rounded-xl bg-cyan-mid text-lg font-bold text-white ${collapsed ? 'hidden lg:flex' : 'hidden'}`}>M</span>
+          <button type="button" onClick={onCloseMobile} aria-label="Close menu" className="ml-auto shrink-0 rounded-md p-1.5 text-milk-500 hover:bg-milk-50 lg:hidden"><X className="size-5" /></button>
+          <button type="button" onClick={onToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className="hidden size-7 shrink-0 items-center justify-center rounded-full border border-milk-200 bg-white text-cyan-deep shadow-sm lg:flex">
+            {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          title="Sign out / Go to Login"
-          className="rounded-md p-1.5 text-milk-400 hover:bg-milk-200/70 hover:text-red-600 transition cursor-pointer"
-        >
-          <LogOut className="size-4 shrink-0" />
-        </button>
-      </div>
-    </aside>
+        <nav className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden">
+          {items.map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} onClick={onCloseMobile}
+              onMouseEnter={(e) => { if (collapsed) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label, top: r.top + r.height / 2, left: r.right + 10 }) } }}
+              onMouseLeave={() => setTip(null)}
+              className={({ isActive }) => ['flex items-center gap-3 rounded-lg px-4 py-3 text-[15px] transition-colors', collapsed ? 'lg:justify-center lg:px-0' : '', isActive ? 'bg-cyan-soft font-semibold text-cyan-deep' : 'font-medium text-milk-500 hover:bg-milk-50 hover:text-milk-700'].join(' ')}>
+              <Icon className="size-5 shrink-0" strokeWidth={2} />
+              <span className={`truncate ${hideOnDesktop}`}>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Profile + logout */}
+        <div className={`mt-auto flex shrink-0 items-center gap-2 rounded-lg bg-milk-50 p-3 ${collapsed ? 'lg:flex-col lg:justify-center' : 'justify-between'}`}>
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <img src={avatar} alt={displayName} className="size-9 shrink-0 rounded-full object-cover" />
+            <div className={`min-w-0 ${hideOnDesktop}`}>
+              <p className="truncate text-sm font-semibold text-milk-900">{displayName}</p>
+              <p className="truncate text-xs capitalize text-milk-500">{profile?.role ?? ''}</p>
+            </div>
+          </div>
+          <button type="button" onClick={() => setConfirmOut(true)} title="Sign out" aria-label="Sign out" className="shrink-0 rounded-md p-1.5 text-milk-400 transition hover:bg-milk-200/70 hover:text-red-600">
+            <LogOut className="size-4" />
+          </button>
+        </div>
+      </aside>
+
+      {/* Collapsed-rail tag (like reference): shows label tag beside icon on hover, desktop only */}
+      {collapsed && tip && (
+        <span className="pointer-events-none fixed z-[70] hidden -translate-y-1/2 items-center lg:flex" style={{ top: tip.top, left: tip.left }}>
+          <span className="-mr-1 size-2 rotate-45 bg-cyan-deep" />
+          <span className="rounded-md bg-cyan-deep px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-white shadow-md">{tip.label}</span>
+        </span>
+      )}
+
+      {confirmOut && (
+        <Modal title="Sign out?" narrow onClose={() => setConfirmOut(false)}>
+          <p className="text-sm text-milk-500">Are you sure you want to sign out of MilkGo?</p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setConfirmOut(false)} className="rounded-lg border border-milk-200 px-4 py-2 text-sm font-semibold text-milk-700">Cancel</button>
+            <button onClick={handleLogout} className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white">Sign Out</button>
+          </div>
+        </Modal>
+      )}
+    </>
   )
 }
