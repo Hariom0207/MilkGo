@@ -1,5 +1,4 @@
 import { OrderEntryForm } from './OrderEntryForm'
-import { customers } from '../data/customers'
 
 export function AddSalesOrder() {
   return (
@@ -9,7 +8,8 @@ export function AddSalesOrder() {
       partyLabel="Select Customer"
       backTo="/sales"
       endpoint="/sales-orders"
-      parties={customers.map((c) => c.name)}
+      partiesEndpoint="/customers"
+      parties={[]}
       partyKey="customerName"
     />
   )

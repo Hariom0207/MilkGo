@@ -6,6 +6,7 @@ import { AuthInput } from '../components/auth/AuthInput'
 import { GoogleButton } from '../components/auth/GoogleButton'
 import { useAuth } from '../context/AuthContext'
 import { authErrorMessage } from '../lib/authErrors'
+import { isValidPhone, sanitizePhone, PHONE_ERROR } from '../lib/phone'
 
 export function SignUpPage() {
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ export function SignUpPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.name === 'mobileNumber' ? sanitizePhone(e.target.value) : e.target.value,
     }))
   }
 
@@ -33,6 +34,10 @@ export function SignUpPage() {
     e.preventDefault()
     if (!formData.fullName.trim() || !formData.email.trim() || !formData.password) {
       setError('Please fill in your name, email and password.')
+      return
+    }
+    if (formData.mobileNumber && !isValidPhone(formData.mobileNumber)) {
+      setError(PHONE_ERROR)
       return
     }
     if (formData.password !== formData.confirmPassword) {
@@ -112,8 +117,11 @@ export function SignUpPage() {
                 label="Mobile Number"
                 name="mobileNumber"
                 type="tel"
+                inputMode="numeric"
+                maxLength={10}
                 icon={Phone}
-                placeholder="Enter your mobile number"
+                placeholder="Enter 10-digit mobile number"
+                error={formData.mobileNumber && !isValidPhone(formData.mobileNumber) ? PHONE_ERROR : undefined}
                 value={formData.mobileNumber}
                 onChange={handleChange}
               />

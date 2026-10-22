@@ -6,12 +6,6 @@ import { ProductForm } from '../components/ProductForm'
 import { api } from '../lib/api'
 import type { ApiProduct } from '../data/products'
 import { LayoutGrid, List, Plus, Search } from 'lucide-react'
-import tonedMilk from '../assets/products/toned-milk.png'
-import fullCreamMilk from '../assets/products/full-cream-milk.png'
-import thickCurd from '../assets/products/thick-curd.png'
-import softPaneer from '../assets/products/soft-paneer.png'
-import cowGhee from '../assets/products/cow-ghee.png'
-import saltedButter from '../assets/products/salted-butter.png'
 
 const categories = [
   'All Products',
@@ -40,87 +34,6 @@ type Product = {
   sell: string
   margin: string
 }
-
-const builtIn: Product[] = [
-  {
-    id: 'MILK-TON-500',
-    category: 'Milk',
-    name: 'Standard Toned Milk',
-    pack: '500ml Pouch',
-    sku: 'MILK-TON-500',
-    image: tonedMilk,
-    stockLabel: 'In Stock (1,250)',
-    stockTone: 'in',
-    buy: '₹24.00',
-    sell: '₹28.00',
-    margin: '14.3%',
-  },
-  {
-    id: 'MILK-CRM-1000',
-    category: 'Milk',
-    name: 'Full Cream Milk',
-    pack: '1L Pet Bottle',
-    sku: 'MILK-CRM-1000',
-    image: fullCreamMilk,
-    stockLabel: 'In Stock (840)',
-    stockTone: 'in',
-    buy: '₹52.00',
-    sell: '₹64.00',
-    margin: '18.7%',
-  },
-  {
-    id: 'CURD-THK-400',
-    category: 'Curd',
-    name: 'Fresh Thick Curd',
-    pack: '400g Tub',
-    sku: 'CURD-THK-400',
-    image: thickCurd,
-    stockLabel: 'Low Stock (145)',
-    stockTone: 'low',
-    buy: '₹34.00',
-    sell: '₹45.00',
-    margin: '24.4%',
-  },
-  {
-    id: 'PAN-SFT-200',
-    category: 'Paneer',
-    name: 'Soft Paneer Premium',
-    pack: '200g Fresh Pack',
-    sku: 'PAN-SFT-200',
-    image: softPaneer,
-    stockLabel: 'In Stock (410)',
-    stockTone: 'in',
-    buy: '₹65.00',
-    sell: '₹85.00',
-    margin: '23.5%',
-  },
-  {
-    id: 'GHEE-COW-1000',
-    category: 'Ghee',
-    name: 'Cow Ghee Jar',
-    pack: '1L Tin Jar',
-    sku: 'GHEE-COW-1000',
-    image: cowGhee,
-    stockLabel: 'Out of Stock',
-    stockTone: 'out',
-    buy: '₹550.00',
-    sell: '₹690.00',
-    margin: '20.3%',
-  },
-  {
-    id: 'BUTR-SLT-500',
-    category: 'Butter',
-    name: 'Salted Cooking Butter',
-    pack: '500g Block',
-    sku: 'BUTR-SLT-500',
-    image: saltedButter,
-    stockLabel: 'In Stock (380)',
-    stockTone: 'in',
-    buy: '₹180.00',
-    sell: '₹220.00',
-    margin: '18.1%',
-  },
-]
 
 const inr = (paise: number) => `₹${(paise / 100).toFixed(2)}`
 
@@ -166,10 +79,7 @@ export function ProductsCatalog() {
       .then((rows) => setAdded(rows.map(fromApi)))
       .catch(() => {})
   }, [])
-  const products = useMemo(
-    () => [...builtIn, ...added.filter((a) => !builtIn.some((b) => b.name === a.name))],
-    [added],
-  )
+  const products = added
   const [selected, setSelected] = useState<Product | null>(null)
   const [editing, setEditing] = useState(false)
   const [query, setQuery] = useState('')
@@ -262,7 +172,7 @@ export function ProductsCatalog() {
 
         {visible.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-milk-200 bg-white p-10 text-center text-milk-500">
-            No products match this search.
+            {added.length ? 'No products match this search.' : 'No products yet. Add the products this vendor sells.'}
           </div>
         ) : view === 'grid' ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">

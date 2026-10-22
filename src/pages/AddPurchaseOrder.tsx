@@ -5,10 +5,11 @@ export function AddPurchaseOrder() {
     <OrderEntryForm
       pageTitle="Purchase Orders"
       formTitle="Add Purchase Entry"
-      partyLabel="Select Dairy Factory/Factory"
+      partyLabel="Select Supplier"
       backTo="/purchase"
       endpoint="/purchases"
-      parties={['Apex Dairy Farms Ltd.', 'Ganga Dairy Co.', 'Yamuna Dairy Pvt Ltd']}
+      partiesEndpoint="/suppliers"
+      parties={[]}
       partyKey="supplierName"
     />
   )

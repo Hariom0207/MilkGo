@@ -24,8 +24,8 @@ export const isAdminEmail = (email?: string | null) =>
 /** Nav paths each role may open. Admin: all. */
 export const ROLE_ROUTES: Record<Role, string[]> = {
   admin: ['*'],
-  vendor: ['/home', '/purchase', '/sales', '/inventory', '/distributors', '/customers', '/products', '/reports', '/settings', '/team'],
-  staff: ['/home', '/purchase', '/sales', '/inventory', '/customers', '/products'], // entry only
+  vendor: ['/home', '/purchase', '/sales', '/daily-status', '/inventory', '/distributors', '/customers', '/products', '/reports', '/settings', '/team'],
+  staff: ['/home', '/purchase', '/sales', '/daily-status'], // add purchase and sales records, and the day's return
 }
 export const canAccess = (role: Role, path: string) =>
   ROLE_ROUTES[role].includes('*') || ROLE_ROUTES[role].some((p) => path === p || path.startsWith(p + '/'))
