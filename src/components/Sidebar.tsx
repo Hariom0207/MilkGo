@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, ShoppingCart, ShoppingBag, Archive, Truck, Users, Box,
+  LayoutDashboard, ShoppingCart, ShoppingBag, ClipboardCheck, Archive, Truck, Users, Box,
   BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
 import avatar from '../assets/avatar.png'
@@ -13,9 +13,11 @@ import { useState } from 'react'
 const navItems = [
   { to: '/home', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/admin/vendors', label: 'Vendors', icon: Truck },
   { to: '/team', label: 'My Staff', icon: Users },
   { to: '/purchase', label: 'Purchase', icon: ShoppingCart },
   { to: '/sales', label: 'Sales', icon: ShoppingBag },
+  { to: '/daily-status', label: 'Daily Status', icon: ClipboardCheck },
   { to: '/inventory', label: 'Inventory', icon: Archive },
   { to: '/distributors', label: 'Distributors', icon: Truck },
   { to: '/customers', label: 'Customers', icon: Users },
@@ -33,8 +35,8 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: Prop
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null)
   const displayName = profile?.name || user?.displayName || user?.email || 'MilkGo User'
   const items = navItems.filter((i) =>
-    i.to === '/admin/users' ? profile?.role === 'admin'
-    : i.to === '/team' ? profile?.role === 'vendor' || profile?.role === 'admin'
+    i.to === '/admin/users' || i.to === '/admin/vendors' ? profile?.role === 'admin'
+    : i.to === '/team' ? profile?.role === 'vendor'
     : profile ? canAccess(profile.role, i.to) : false)
 
   const handleLogout = async () => { setConfirmOut(false); await logout(); navigate('/login') }

@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, Check, ChevronDown, Plus, Trash2, X } from 'lucide-react'
 import { api } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
 import { useCatalog } from '../data/products'
 import { ProductImage } from '../components/ProductImage'
 import { Modal } from '../components/Modal'
 
 type LineItem = { name: string; qty: string }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 const formatInr = (value: number) => `₹${value.toLocaleString('en-IN')}`
 
 type OrderEntryFormProps = {
@@ -19,13 +20,18 @@ type OrderEntryFormProps = {
   /** When set, the reviewed order is POSTed here before navigating back. */
   endpoint?: string
   parties: string[]
+  /** Load party names from this API list (`{ name }[]`). Typed names still save. */
+  partiesEndpoint?: string
   /** Field name the selected party is saved under. */
   partyKey: string
 }
 
-export function OrderEntryForm({ pageTitle, formTitle, partyLabel, backTo, endpoint, parties, partyKey }: OrderEntryFormProps) {
+export function OrderEntryForm({ pageTitle, formTitle, partyLabel, backTo, endpoint, parties, partiesEndpoint, partyKey }: OrderEntryFormProps) {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const { products: catalog, addProduct } = useCatalog()
+  const [partyList, setPartyList] = useState<{ id?: string; name: string }[]>(parties.map((name) => ({ name })))
+  const partyNames = partyList.map((p) => p.name)
   const [adding, setAdding] = useState(false)
   const [np, setNp] = useState({ name: '', unit: '', rate: '' })
   const [factory, setFactory] = useState('')
@@ -35,6 +41,13 @@ export function OrderEntryForm({ pageTitle, formTitle, partyLabel, backTo, endpo
   const [reviewing, setReviewing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!partiesEndpoint) return
+    api.get<{ id?: string; name?: string }[]>(partiesEndpoint)
+      .then((rows) => setPartyList(rows.filter((r) => r.name).map((r) => ({ id: r.id, name: r.name! }))))
+      .catch(() => {})
+  }, [partiesEndpoint])
 
   const lines = useMemo(
     () =>
@@ -68,6 +81,7 @@ export function OrderEntryForm({ pageTitle, formTitle, partyLabel, backTo, endpo
     try {
       await api.post(endpoint, {
         [partyKey]: factory,
+        ...(partyKey === 'customerName' ? { customerId: partyList.find((p) => p.name === factory)?.id ?? null } : {}),
         date,
         time: new Date().toTimeString().slice(0, 5),
         items: lines.map((l) => ({
@@ -126,7 +140,7 @@ export function OrderEntryForm({ pageTitle, formTitle, partyLabel, backTo, endpo
                   className="h-[41px] w-full rounded-lg border border-milk-200 bg-white px-3 pr-10 text-sm text-milk-900 outline-none placeholder:text-milk-400"
                 />
                 <datalist id="party-options">
-                  {parties.map((name) => (
+                  {partyNames.map((name) => (
                     <option key={name} value={name} />
                   ))}
                 </datalist>
@@ -240,7 +254,7 @@ export function OrderEntryForm({ pageTitle, formTitle, partyLabel, backTo, endpo
               )
             })}
           </div>
-          {adding ? (
+          {profile?.role !== 'staff' && (adding ? (
             <div className="grid grid-cols-3 gap-2">
               {(['name', 'unit', 'rate'] as const).map((k) => (
                 <input
@@ -282,7 +296,7 @@ export function OrderEntryForm({ pageTitle, formTitle, partyLabel, backTo, endpo
               <Plus className="size-3.5" />
               New Product
             </button>
-          )}
+          ))}
           {error && <p className="text-[13px] text-danger">{error}</p>}
           <button
             type="button"

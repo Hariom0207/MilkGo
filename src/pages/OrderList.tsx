@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Download, Plus } from 'lucide-react'
 import { KpiRow } from '../components/KpiRow'
-import { StatusBadge } from '../components/StatusBadge'
+import { StatusSelect } from '../components/StatusSelect'
 import { api } from '../lib/api'
 import { useCatalog } from '../data/products'
 import { ProductImage } from '../components/ProductImage'
@@ -11,6 +11,7 @@ import { TableSkeleton } from '../components/Skeleton'
 
 type Order = {
   id: string
+  customerId?: string | null
   [partyKey: string]: unknown
   date: string
   time: string
@@ -19,8 +20,6 @@ type Order = {
   status: string
 }
 
-type Kpi = { label: string; value: string; badge: string; tone: 'up' | 'down' }
-
 type OrderListProps = {
   title: string
   listTitle: string
@@ -28,20 +27,47 @@ type OrderListProps = {
   partyKey: string
   endpoint: string
   addTo: string
-  kpis: Kpi[]
 }
 
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN')}`
+const todayIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 
-export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, addTo, kpis }: OrderListProps) {
+export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, addTo }: OrderListProps) {
   const [rows, setRows] = useState<Order[]>([])
   const { products: catalog } = useCatalog()
   const [selected, setSelected] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [onlyToday, setOnlyToday] = useState(false)
+  const today = todayIso()
+  const [nameById, setNameById] = useState<Record<string, string>>({})
   useEffect(() => {
     setLoading(true)
     api.get<Order[]>(endpoint).then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
-  }, [endpoint])
+    if (partyKey === 'customerName') {
+      api.get<{ id: string; name: string }[]>('/customers').then((cs) => setNameById(Object.fromEntries(cs.map((c) => [c.id, c.name])))).catch(() => {})
+    }
+  }, [endpoint, partyKey])
+
+  const setStatus = async (row: Order, status: string) => {
+    if (status === row.status) return
+    try {
+      await api.patch(`${endpoint}/${row.id}`, { status })
+      setRows((cur) => cur.map((r) => r.id === row.id ? { ...r, status } : r))
+      setSelected((cur) => cur && cur.id === row.id ? { ...cur, status } : cur)
+      setError('')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not update status') }
+  }
+  const shown = onlyToday ? rows.filter((r) => r.date === today) : rows
+  const sum = (list: Order[]) => list.reduce((s, r) => s + (r.total || 0), 0)
+  const todayRows = rows.filter((r) => r.date === today)
+  const pending = rows.filter((r) => r.status === 'Pending')
+  const kpis = [
+    { label: "Today", value: inr(sum(todayRows)), badge: String(todayRows.length), tone: 'up' as const },
+    { label: 'Total', value: inr(sum(rows)), badge: String(rows.length), tone: 'up' as const },
+    { label: 'Pending', value: String(pending.length), badge: inr(sum(pending)), tone: 'down' as const },
+    { label: 'Showing', value: String(shown.length), badge: onlyToday ? 'Today' : 'All', tone: 'up' as const },
+  ]
 
   return (
     <div className="flex min-h-full flex-col">
@@ -58,17 +84,23 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
 
       <div className="flex flex-col gap-6 p-8">
         <KpiRow items={kpis} />
+        {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
         <article className="rounded-xl border border-milk-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-milk-900">{listTitle}</h2>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-milk-200 bg-milk-50 px-3 py-2 text-[13px] font-semibold text-milk-900"
-            >
-              <Download className="size-4" />
-              Export Excel
-            </button>
+            <h2 className="text-base font-semibold text-milk-900">{onlyToday ? `Daily list · ${today}` : listTitle}</h2>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setOnlyToday((v) => !v)} className="rounded-md border border-milk-200 bg-white px-3 py-2 text-[13px] font-semibold text-milk-900">
+                {onlyToday ? 'Show all' : 'Daily list'}
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-md border border-milk-200 bg-milk-50 px-3 py-2 text-[13px] font-semibold text-milk-900"
+              >
+                <Download className="size-4" />
+                Export Excel
+              </button>
+            </div>
           </div>
           {loading ? <TableSkeleton rows={6} /> : (
           <div className="overflow-x-auto">
@@ -88,14 +120,14 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 && (
+                {shown.length === 0 && (
                   <tr>
                     <td colSpan={4 + catalog.length} className="py-6 text-center text-[13px] text-milk-400">
-                      No purchases yet
+                      No records yet
                     </td>
                   </tr>
                 )}
-                {rows.map((row, i) => (
+                {shown.map((row, i) => (
                   <tr
                     key={row.id}
                     onClick={() => setSelected(row)}
@@ -103,7 +135,7 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
                   >
                     <td className="whitespace-nowrap px-3 py-3 align-top text-milk-500">{row.date}</td>
                     <td className="whitespace-nowrap px-3 py-3 align-top text-milk-500">{row.time}</td>
-                    <td className="whitespace-nowrap px-3 py-3 align-top font-medium text-milk-900">{String(row[partyKey])}</td>
+                    <td className="whitespace-nowrap px-3 py-3 align-top font-medium text-milk-900">{(row.customerId && nameById[row.customerId]) || String(row[partyKey])}</td>
                     {catalog.map((p) => {
                       const item = row.items.find((it) => it.name === p.name)
                       return (
@@ -113,8 +145,8 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
                       )
                     })}
                     <td className="whitespace-nowrap px-3 py-3 text-right align-top font-semibold text-milk-900">{inr(row.total)}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-center align-top">
-                      <StatusBadge status={row.status} />
+                    <td className="whitespace-nowrap px-3 py-3 text-center align-top" onClick={(e) => e.stopPropagation()}>
+                      <StatusSelect value={row.status || 'Pending'} options={['Pending', 'Paid']} onChange={(s) => setStatus(row, s)} />
                     </td>
                   </tr>
                 ))}
@@ -127,7 +159,7 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
       {selected && (
         <Modal title={`${title.replace(/ Orders$/, "")} Details`} onClose={() => setSelected(null)}>
           <div className="flex justify-between text-[13px] text-milk-500">
-            <span className="font-semibold text-milk-900">{String(selected[partyKey])}</span>
+            <span className="font-semibold text-milk-900">{(selected.customerId && nameById[selected.customerId]) || String(selected[partyKey])}</span>
             <span>
               {selected.date} · {selected.time}
             </span>
@@ -147,7 +179,7 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
             ))}
           </div>
           <div className="flex items-center justify-between text-sm">
-            <StatusBadge status={selected.status} />
+            <StatusSelect value={selected.status || 'Pending'} options={['Pending', 'Paid']} onChange={(s) => setStatus(selected, s)} />
             <span>
               <span className="font-semibold text-milk-900">Total Net Amount </span>
               <span className="font-bold text-cyan-deep">{inr(selected.total)}</span>

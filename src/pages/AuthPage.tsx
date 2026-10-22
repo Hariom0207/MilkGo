@@ -4,6 +4,7 @@ import { User, Mail, Phone, Lock, ArrowRight } from 'lucide-react'
 import { AuthBanner } from '../components/auth/AuthBanner'
 import { AuthInput } from '../components/auth/AuthInput'
 import { GoogleButton } from '../components/auth/GoogleButton'
+import { isValidPhone, sanitizePhone, PHONE_ERROR } from '../lib/phone'
 
 interface AuthPageProps {
   defaultMode?: 'login' | 'signup'
@@ -77,6 +78,11 @@ export function AuthPage({ defaultMode = 'signup' }: AuthPageProps) {
       !signupData.confirmPassword.trim()
     ) {
       setError('Please fill in all the required fields.')
+      return
+    }
+
+    if (!isValidPhone(signupData.mobileNumber)) {
+      setError(PHONE_ERROR)
       return
     }
 
@@ -289,11 +295,14 @@ export function AuthPage({ defaultMode = 'signup' }: AuthPageProps) {
                     label="Mobile Number"
                     name="mobileNumber"
                     type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
                     icon={Phone}
-                    placeholder="Enter your mobile number"
+                    placeholder="Enter 10-digit mobile number"
+                    error={signupData.mobileNumber && !isValidPhone(signupData.mobileNumber) ? PHONE_ERROR : undefined}
                     value={signupData.mobileNumber}
                     onChange={(e) =>
-                      setSignupData((prev) => ({ ...prev, mobileNumber: e.target.value }))
+                      setSignupData((prev) => ({ ...prev, mobileNumber: sanitizePhone(e.target.value) }))
                     }
                     required
                   />

@@ -1,94 +1,152 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download } from 'lucide-react'
-import { KpiRow } from '../components/KpiRow'
-import { StatusBadge } from '../components/StatusBadge'
-import { customers } from '../data/customers'
+import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { api } from '../lib/api'
+import { isValidPhone, sanitizePhone, PHONE_ERROR } from '../lib/phone'
+import { inr } from '../lib/money'
+import { Modal } from '../components/Modal'
+import { StatusSelect } from '../components/StatusSelect'
+import { TableSkeleton } from '../components/Skeleton'
 
-const kpis = [
-  { label: "Today's Purchase", value: '₹1,84,350', badge: '+12.4%', tone: 'up' as const },
-  { label: 'Monthly Purchase', value: '₹2,45,820', badge: '+8.2%', tone: 'up' as const },
-  { label: 'Active Distributors', value: '142', badge: '+3 New', tone: 'up' as const },
-  { label: 'Pending Orders', value: '28', badge: '-5%', tone: 'down' as const },
-]
+type CustomerStatus = 'pending' | 'active'
+type Customer = {
+  id: string
+  name: string
+  phone?: string
+  email?: string
+  address?: string
+  type: 'retailer' | 'walkin'
+  status?: CustomerStatus
+  outstandingBalance?: number
+  totalPurchased?: number
+}
 
-const rows = [
-  { date: '21 Aug 2026', customerId: 'ganga-dairy', p1: '120 Kg', p2: '0', p3: '0', rate: '₹420/Kg', amount: '₹50,400', status: 'Paid' },
-  { date: '20 Aug 2026', customerId: 'yamuna-dairy', p1: '2,400', p2: '0', p3: '0', rate: '₹18/Cup', amount: '₹43,200', status: 'Pending' },
-  { date: '19 Aug 2026', customerId: 'saraswati-ghee', p1: '80 Kg', p2: '0', p3: '0', rate: '₹1,120/Kg', amount: '₹89,600', status: 'Paid' },
-  { date: '18 Aug 2026', customerId: 'butter-cream', p1: '45 Kg', p2: '0', p3: '0', rate: '₹980/Kg', amount: '₹44,100', status: 'Pending' },
-  { date: '17 Aug 2026', customerId: 'dairy-hub', p1: '12', p2: '0', p3: '0', rate: '₹6,250/Bag', amount: '₹75,000', status: 'Paid' },
-]
+const CUSTOMER_STATUS = ['pending', 'active'] as const
 
 export function CustomerOrders() {
+  const [rows, setRows] = useState<Customer[]>([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', type: 'retailer' as 'retailer' | 'walkin' })
+  const [phoneError, setPhoneError] = useState('')
+  const [edit, setEdit] = useState<Customer | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', address: '', type: 'retailer' as 'retailer' | 'walkin' })
+  const [editPhoneError, setEditPhoneError] = useState('')
+
+  const load = () => {
+    api.get<Customer[]>('/customers').then(setRows).catch((err) => setError(err instanceof Error ? err.message : 'Failed')).finally(() => setLoading(false))
+  }
+  useEffect(load, [])
+
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (form.phone && !isValidPhone(form.phone)) { setPhoneError(PHONE_ERROR); return }
+    setPhoneError('')
+    try {
+      await api.post('/customers', { name: form.name.trim(), phone: form.phone, email: form.email.trim(), address: form.address, type: form.type })
+      setForm({ name: '', phone: '', email: '', address: '', type: 'retailer' })
+      load()
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to add customer') }
+  }
+
+  const setStatus = async (c: Customer, status: CustomerStatus) => {
+    if ((c.status ?? 'active') === status) return
+    try { await api.patch(`/customers/${c.id}`, { status }); load() }
+    catch (err) { setError(err instanceof Error ? err.message : 'Failed') }
+  }
+  const remove = async (c: Customer) => {
+    if (!confirm(`Delete ${c.name}?`)) return
+    try { await api.delete(`/customers/${c.id}`); load() }
+    catch (err) { setError(err instanceof Error ? err.message : 'Failed') }
+  }
+  const openEdit = (c: Customer) => {
+    setEdit(c)
+    setEditForm({ name: c.name, phone: c.phone || '', email: c.email || '', address: c.address || '', type: c.type })
+    setEditPhoneError('')
+  }
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!edit) return
+    if (editForm.phone && !isValidPhone(editForm.phone)) { setEditPhoneError(PHONE_ERROR); return }
+    try {
+      await api.patch(`/customers/${edit.id}`, { name: editForm.name.trim(), phone: editForm.phone, email: editForm.email.trim(), address: editForm.address, type: editForm.type })
+      setEdit(null); load()
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to update') }
+  }
+
+  const input = 'rounded-lg border border-milk-200 px-3 py-2 text-sm outline-none focus:border-cyan-mid'
   return (
     <div className="flex min-h-full flex-col">
       <header className="flex h-[72px] items-center border-b border-milk-200 bg-white px-8">
-        <h1 className="text-2xl font-bold text-milk-900">Customer Orders</h1>
+        <h1 className="text-2xl font-bold text-milk-900">Customers</h1>
       </header>
-
-      <div className="flex flex-col gap-6 p-8">
-        <KpiRow items={kpis} />
-
-        <article className="rounded-xl border border-milk-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-milk-900">Monthly Customer List</h2>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-milk-200 bg-milk-50 px-3 py-2 text-[13px] font-semibold text-milk-900"
-            >
-              <Download className="size-4" />
-              Export Excel
-            </button>
+      <div className="space-y-6 p-8">
+        {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+        <form onSubmit={add} className="grid gap-3 rounded-xl border border-milk-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-6">
+          <input required placeholder="Customer name" className={input} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <div>
+            <input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile no." aria-invalid={!!phoneError} className={`${input} w-full ${phoneError ? 'border-red-400' : ''}`} value={form.phone} onChange={(e) => { const p = sanitizePhone(e.target.value); setForm({ ...form, phone: p }); setPhoneError(p && !isValidPhone(p) ? PHONE_ERROR : '') }} />
+            {phoneError && <p className="mt-1 text-xs text-danger">{phoneError}</p>}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left">
-              <thead>
-                <tr className="border-b border-milk-200 bg-milk-50 text-[13px] font-semibold text-milk-500">
-                  <th className="px-3 py-2.5 font-semibold">Date</th>
-                  <th className="px-3 py-2.5 font-semibold">Customer Name</th>
-                  <th className="px-3 py-2.5 font-semibold">P1</th>
-                  <th className="px-3 py-2.5 font-semibold">P2</th>
-                  <th className="px-3 py-2.5 font-semibold">P3</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Rate</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Amount</th>
-                  <th className="px-3 py-2.5 text-center font-semibold">Status</th>
-                </tr>
-              </thead>
+          <input type="email" placeholder="Email" className={input} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input placeholder="Address" className={input} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <select className={input} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'retailer' | 'walkin' })}>
+            <option value="retailer">Retailer</option>
+            <option value="walkin">Walk-in</option>
+          </select>
+          <button className="rounded-lg bg-cyan-mid px-4 py-2 text-sm font-semibold text-white">Add Customer</button>
+        </form>
+        <div className="overflow-x-auto rounded-xl border border-milk-200 bg-white">
+          {loading ? <TableSkeleton rows={5} /> : (
+            <table className="w-full min-w-[820px] text-left text-sm">
+              <thead><tr className="border-b border-milk-200 text-milk-500">{['Name', 'Type', 'Phone', 'Email', 'Status', 'Purchased', 'Due', ''].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr></thead>
               <tbody>
-                {rows.map((row, i) => {
-                  const customer = customers.find((c) => c.id === row.customerId)
+                {rows.map((c) => {
+                  const status = c.status ?? 'active'
                   return (
-                    <tr
-                      key={row.customerId}
-                      className={`border-b border-milk-200 text-[13px] ${i % 2 === 0 ? 'bg-milk-50' : 'bg-white'}`}
-                    >
-                      <td className="px-3 py-2.5 text-milk-500">{row.date}</td>
-                      <td className="px-3 py-2.5">
-                        <Link
-                          to={`/customers/${row.customerId}`}
-                          className="font-medium text-milk-900 hover:text-cyan-mid hover:underline"
-                        >
-                          {customer?.name}
-                        </Link>
+                    <tr key={c.id} className="border-b border-milk-100">
+                      <td className="px-4 py-3 font-medium">{c.name}<span className="block text-xs font-normal text-milk-500">{c.address}</span></td>
+                      <td className="px-4 py-3 capitalize">{c.type}</td>
+                      <td className="px-4 py-3">{c.phone || '—'}</td>
+                      <td className="px-4 py-3">{c.email || '—'}</td>
+                      <td className="px-4 py-3">
+                        <StatusSelect value={status} options={CUSTOMER_STATUS} onChange={(s) => setStatus(c, s as CustomerStatus)} />
                       </td>
-                      <td className="px-3 py-2.5 text-milk-900">{row.p1}</td>
-                      <td className="px-3 py-2.5 text-milk-900">{row.p2}</td>
-                      <td className="px-3 py-2.5 text-milk-900">{row.p3}</td>
-                      <td className="px-3 py-2.5 text-right text-milk-500">{row.rate}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold text-milk-900">
-                        {row.amount}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <StatusBadge status={row.status} />
+                      <td className="px-4 py-3">{inr(c.totalPurchased ?? 0)}</td>
+                      <td className="px-4 py-3">{inr(c.outstandingBalance ?? 0)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <Link to={`/customers/${c.id}`} aria-label="View" className="rounded-md p-1.5 text-milk-500 hover:bg-milk-50 hover:text-cyan-mid"><Eye className="size-4" /></Link>
+                          <button type="button" aria-label="Edit" onClick={() => openEdit(c)} className="rounded-md p-1.5 text-milk-500 hover:bg-milk-50 hover:text-cyan-mid"><Pencil className="size-4" /></button>
+                          <button type="button" aria-label="Delete" onClick={() => remove(c)} className="rounded-md p-1.5 text-milk-500 hover:bg-red-50 hover:text-danger"><Trash2 className="size-4" /></button>
+                        </div>
                       </td>
                     </tr>
                   )
                 })}
+                {!rows.length && <tr><td colSpan={8} className="px-4 py-8 text-center text-milk-500">No customers yet.</td></tr>}
               </tbody>
             </table>
-          </div>
-        </article>
+          )}
+        </div>
       </div>
+      {edit && (
+        <Modal title="Edit customer" narrow onClose={() => setEdit(null)}>
+          <form onSubmit={saveEdit} className="flex flex-col gap-3">
+            <input required placeholder="Name" className={input} value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            <input type="email" placeholder="Email" className={input} value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+            <input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile no." aria-invalid={!!editPhoneError} className={`${input} ${editPhoneError ? 'border-red-400' : ''}`} value={editForm.phone} onChange={(e) => { const p = sanitizePhone(e.target.value); setEditForm({ ...editForm, phone: p }); setEditPhoneError(p && !isValidPhone(p) ? PHONE_ERROR : '') }} />
+            {editPhoneError && <p className="text-xs text-danger">{editPhoneError}</p>}
+            <input placeholder="Address" className={input} value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
+            <select className={input} value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'retailer' | 'walkin' })}>
+              <option value="retailer">Retailer</option>
+              <option value="walkin">Walk-in</option>
+            </select>
+            <button className="rounded-lg bg-cyan-mid px-4 py-2 text-sm font-semibold text-white">Save</button>
+          </form>
+        </Modal>
+      )}
     </div>
   )
 }
