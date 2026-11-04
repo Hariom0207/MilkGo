@@ -15,6 +15,7 @@ import { ProductsCatalog } from './pages/ProductsCatalog'
 import { PurchaseOrders } from './pages/PurchaseOrders'
 import { SalesOrders } from './pages/SalesOrders'
 import { SignUpPage } from './pages/SignUpPage'
+import { Suppliers } from './pages/Suppliers'
 import { UserManagement } from './pages/UserManagement'
 import { VendorDetail } from './pages/VendorDetail'
 import { Vendors } from './pages/Vendors'
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="distributors" element={<Guard roles={vendorUp}><Distributors /></Guard>} />
           <Route path="customers" element={<Guard roles={vendorUp}><CustomerOrders /></Guard>} />
           <Route path="customers/:customerId" element={<Guard roles={vendorUp}><CustomerDetails /></Guard>} />
+          <Route path="suppliers" element={<Guard roles={vendorUp}><Suppliers /></Guard>} />
           <Route path="products" element={<Guard roles={vendorUp}><ProductsCatalog /></Guard>} />
           <Route path="products/new" element={<Guard roles={vendorUp}><AddProduct /></Guard>} />
           <Route path="reports" element={<Guard roles={vendorUp}><PlaceholderPage title="Reports" /></Guard>} />

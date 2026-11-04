@@ -6,6 +6,7 @@ const tone: Record<string, string> = {
   approved: 'bg-stock-in-bg text-stock-in',
   active: 'bg-stock-in-bg text-stock-in',
   Paid: 'bg-cyan-soft text-cyan-deep',
+  Delivered: 'bg-cyan-soft text-cyan-deep',
   suspended: 'bg-amber-100 text-warn',
   rejected: 'bg-stock-out-bg text-stock-out',
 }
