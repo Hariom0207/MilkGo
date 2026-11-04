@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, ShoppingBag, ClipboardCheck, Archive, Truck, Users, Box,
-  BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, X,
+  BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, X, Warehouse,
 } from 'lucide-react'
 import avatar from '../assets/avatar.png'
 import { useAuth } from '../context/AuthContext'
@@ -21,6 +21,7 @@ const navItems = [
   { to: '/inventory', label: 'Inventory', icon: Archive },
   { to: '/distributors', label: 'Distributors', icon: Truck },
   { to: '/customers', label: 'Customers', icon: Users },
+  { to: '/suppliers', label: 'Suppliers', icon: Warehouse },
   { to: '/products', label: 'Products', icon: Box },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },

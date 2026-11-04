@@ -12,12 +12,18 @@ import { TableSkeleton } from '../components/Skeleton'
 type Order = {
   id: string
   customerId?: string | null
+  supplierId?: string | null
   [partyKey: string]: unknown
   date: string
   time: string
   items: { name: string; quantity: number; unit?: string; rate: number; amount: number }[]
   total: number
   status: string
+}
+
+function partyLabel(row: Order, partyKey: string, nameById: Record<string, string>) {
+  const id = partyKey === 'customerName' ? row.customerId : partyKey === 'supplierName' ? row.supplierId : null
+  return (id && nameById[id]) || String(row[partyKey] ?? '')
 }
 
 type OrderListProps = {
@@ -46,6 +52,8 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
     api.get<Order[]>(endpoint).then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
     if (partyKey === 'customerName') {
       api.get<{ id: string; name: string }[]>('/customers').then((cs) => setNameById(Object.fromEntries(cs.map((c) => [c.id, c.name])))).catch(() => {})
+    } else if (partyKey === 'supplierName') {
+      api.get<{ id: string; name: string }[]>('/suppliers').then((ss) => setNameById(Object.fromEntries(ss.map((s) => [s.id, s.name])))).catch(() => {})
     }
   }, [endpoint, partyKey])
 
@@ -135,7 +143,7 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
                   >
                     <td className="whitespace-nowrap px-3 py-3 align-top text-milk-500">{row.date}</td>
                     <td className="whitespace-nowrap px-3 py-3 align-top text-milk-500">{row.time}</td>
-                    <td className="whitespace-nowrap px-3 py-3 align-top font-medium text-milk-900">{(row.customerId && nameById[row.customerId]) || String(row[partyKey])}</td>
+                    <td className="whitespace-nowrap px-3 py-3 align-top font-medium text-milk-900">{partyLabel(row, partyKey, nameById)}</td>
                     {catalog.map((p) => {
                       const item = row.items.find((it) => it.name === p.name)
                       return (
@@ -146,7 +154,11 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
                     })}
                     <td className="whitespace-nowrap px-3 py-3 text-right align-top font-semibold text-milk-900">{inr(row.total)}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-center align-top" onClick={(e) => e.stopPropagation()}>
-                      <StatusSelect value={row.status || 'Pending'} options={['Pending', 'Paid']} onChange={(s) => setStatus(row, s)} />
+                      <StatusSelect
+                        value={row.status || 'Pending'}
+                        options={partyKey === 'customerName' ? ['Pending', 'Delivered'] : ['Pending', 'Paid']}
+                        onChange={(s) => setStatus(row, s)}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -159,7 +171,7 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
       {selected && (
         <Modal title={`${title.replace(/ Orders$/, "")} Details`} onClose={() => setSelected(null)}>
           <div className="flex justify-between text-[13px] text-milk-500">
-            <span className="font-semibold text-milk-900">{(selected.customerId && nameById[selected.customerId]) || String(selected[partyKey])}</span>
+            <span className="font-semibold text-milk-900">{partyLabel(selected, partyKey, nameById)}</span>
             <span>
               {selected.date} · {selected.time}
             </span>
@@ -179,7 +191,11 @@ export function OrderList({ title, listTitle, partyHeader, partyKey, endpoint, a
             ))}
           </div>
           <div className="flex items-center justify-between text-sm">
-            <StatusSelect value={selected.status || 'Pending'} options={['Pending', 'Paid']} onChange={(s) => setStatus(selected, s)} />
+            <StatusSelect
+              value={selected.status === 'Paid' && partyKey === 'customerName' ? 'Delivered' : (selected.status || 'Pending')}
+              options={partyKey === 'customerName' ? ['Pending', 'Delivered'] : ['Pending', 'Paid']}
+              onChange={(s) => setStatus(selected, s)}
+            />
             <span>
               <span className="font-semibold text-milk-900">Total Net Amount </span>
               <span className="font-bold text-cyan-deep">{inr(selected.total)}</span>
